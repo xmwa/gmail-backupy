@@ -13,9 +13,14 @@ This repository has been updated to maintain compatibility with modern Python ve
 
 ## Running the Application
 
-### GUI Mode
+The most straightforward way to use Gmail Backup is through its graphical interface:
+
+1. Retrieve your Gmail application-specific password from [Google Account Settings](https://myaccount.google.com/apppasswords)
+2. Run the application: `python3 gmail-backup-gui.py`
+3. Follow the on-screen instructions to log in to your Gmail account and select the desired backup options.
 
 #Original README
+
 About:
 ======
 Gmail Backup allows to backup and restore the content of your Gmail account. It
