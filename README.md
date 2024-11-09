@@ -19,7 +19,7 @@ The most straightforward way to use Gmail Backup is through its graphical interf
 2. Run the application: `python3 gmail-backup-gui.py`
 3. Follow the on-screen instructions to log in to your Gmail account and select the desired backup options.
 
-#Original README
+# Original README
 
 About:
 ======
