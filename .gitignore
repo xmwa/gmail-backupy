@@ -1,3 +1,4 @@
 build/
 dist_EXE/
 releases/
+*.pyc
