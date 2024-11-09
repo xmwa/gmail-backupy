@@ -1,3 +1,21 @@
+# Python Compatibility Update
+
+This repository has been updated to maintain compatibility with modern Python versions. The original code was last updated over 10 years ago, and this update aims to:
+
+1. Ensure the core backup and restore functionality works with current Python releases
+2. Support both GUI and command-line operation modes
+3. Preserve the original functionality while modernizing the codebase
+
+## Requirements
+
+- Python 3.8+ (tested up to Python 3.12)
+- Required packages are listed in requirements.txt
+
+## Running the Application
+
+### GUI Mode
+
+#Original README
 About:
 ======
 Gmail Backup allows to backup and restore the content of your Gmail account. It
