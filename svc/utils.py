@@ -19,8 +19,21 @@
 
 import sys
 import codecs
-from types import StringTypes
 from inspect import isroutine
+
+# Python 2/3 compatibility
+try:
+    from types import StringTypes
+except ImportError:
+    # Python 3
+    StringTypes = (str,)
+
+def iteritems_compat(d):
+    """Python 2/3 compatible dict.iteritems()"""
+    try:
+        return d.iteritems()
+    except AttributeError:
+        return d.items()
 
 class sym(object):
     def __init__(self, s):
@@ -127,7 +140,11 @@ def iterslice(sl, length=None):
 
 def seqIntoDict(seq, format):
     _posOptsDict = {}
-    _negativeAfter = sys.maxint
+    # Python 2/3 compatibility
+    try:
+        _negativeAfter = sys.maxint
+    except AttributeError:
+        _negativeAfter = sys.maxsize
     have_ellipsis = False
     i = 0
     if format.count(Ellipsis) > 1:
@@ -162,7 +179,13 @@ def seqIntoDict(seq, format):
     use_negative = ( len(seq) >= _negativeAfter )
     ret = {}
 
-    for opt_name, getter in _posOptsDict.iteritems():
+    # Python 2/3 compatibility
+    try:
+        items = _posOptsDict.iteritems()
+    except AttributeError:
+        items = _posOptsDict.items()
+    
+    for opt_name, getter in items:
         try:
             if not isinstance(getter, slice):
                 # Skip negative indices if there wasn't enough positional

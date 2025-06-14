@@ -1,4 +1,13 @@
 # Copyright (C) 2008 Jan Svec and Filip Jurcicek
+
+# Python 2/3 compatibility
+try:
+    # Python 2
+    file
+except NameError:
+    # Python 3
+    import io
+    file = io.IOBase
 # 
 # YOU USE THIS TOOL ON YOUR OWN RISK!
 # 
@@ -96,11 +105,17 @@ def DictOf(d, template, separators=':,'):
 	d = [tuple(i.split(sep_key)) for i in d.split(sep_item)]
 	d = dict(d)
 	ret = {}
-	for key, val in d.iteritems():
+	# Python 2/3 compatibility
+	try:
+		items = d.iteritems()
+	except AttributeError:
+		items = d.items()
+	
+	for key, val in items:
 		try:
 			conversion = template[key]
 		except KeyError:
-			raise ValueError, 'Unknown key %r' % key
+			raise ValueError('Unknown key %r' % key)
 		ret[key] = conversion(val)
 	return ret
 

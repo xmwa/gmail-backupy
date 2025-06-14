@@ -1,23 +1,80 @@
-# Python Compatibility Update
+# Gmail Backup - Python 2.7 & 3.12 Compatible
 
-This repository has been updated to maintain compatibility with modern Python versions. The original code was last updated over 10 years ago, and this update aims to:
+This repository has been updated to maintain full compatibility with both Python 2.7 and Python 3.12. The original code was last updated over 10 years ago, and this update aims to:
 
-1. Ensure the core backup and restore functionality works with current Python releases
-2. Support both GUI and command-line operation modes
-3. Preserve the original functionality while modernizing the codebase
+1. **Full Python 2.7 & 3.12 compatibility** - Both GUI and CLI work seamlessly
+2. **Preserve original functionality** - All backup, restore, and migration features maintained
+3. **Modern interface improvements** - Better error messages and installation guidance
+4. **Enhanced dependency management** - Automated installation scripts included
 
 ## Requirements
 
-- Python 3.8+ (tested up to Python 3.12)
-- Required packages are listed in requirements.txt
+### Python Versions
+- **Python 2.7** (fully supported)
+- **Python 3.8+** (tested up to Python 3.12)
 
-## Running the Application
+### Dependencies
+- **wxPython** (for GUI mode) - automatically prompted for installation
+- **Standard library modules** (imaplib, email, etc.) - included with Python
 
-The most straightforward way to use Gmail Backup is through its graphical interface:
+## Quick Start
 
-1. Retrieve your Gmail application-specific password from [Google Account Settings](https://myaccount.google.com/apppasswords)
-2. Run the application: `python3 gmail-backup-gui.py`
-3. Follow the on-screen instructions to log in to your Gmail account and select the desired backup options.
+### 1. Install Dependencies (if needed)
+```bash
+# Automated installation (recommended)
+./install_dependencies.sh
+
+# Manual installation
+python -m pip install wxPython      # For Python 2.7
+python3 -m pip install wxPython     # For Python 3.x
+```
+
+### 2. Running the Application
+
+#### GUI Mode (Recommended)
+```bash
+# Python 2.7
+python gmail-backup-gui.py
+
+# Python 3.12
+python3 gmail-backup-gui.py
+```
+
+#### Command Line Mode
+```bash
+# Backup
+python gmail-backup.py backup /path/to/backup user@gmail.com password
+
+# Restore
+python gmail-backup.py restore /path/to/backup user@gmail.com password
+
+# List mailboxes
+python gmail-backup.py list user@gmail.com password
+
+# Get help
+python gmail-backup.py --help
+```
+
+### 3. Gmail Setup
+1. Enable 2-factor authentication in your Google Account
+2. Generate an app-specific password at [Google Account Settings](https://myaccount.google.com/apppasswords)
+3. Use the app-specific password (not your regular password) in Gmail Backup
+
+## Compatibility Features
+
+- **Python 2/3 print statements** - Uses `from __future__ import print_function`
+- **Unicode handling** - Automatic Python 2/3 unicode compatibility
+- **wxPython versions** - Works with both old and new wxPython APIs
+- **Threading compatibility** - Handles `is_alive()` vs `isAlive()` differences
+- **Installation guidance** - Clear, specific installation instructions with multiple options
+
+## Files
+
+- **`gmail-backup-gui.py`** - Graphical user interface (Python 2.7 & 3.12 compatible)
+- **`gmail-backup.py`** - Command-line interface (Python 2.7 & 3.12 compatible) 
+- **`install_dependencies.sh`** - Automated dependency installation script
+- **`gmail-backup-original.py`** - Original complex framework (Python 2 only)
+- **`gmb.py`** - Core Gmail backup functionality library
 
 # Original README
 

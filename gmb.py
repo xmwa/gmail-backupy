@@ -61,8 +61,8 @@ try:
 except ImportError:
     from md5 import md5
 
-GMB_REVISION = u'-Revision: 12346 -'  # Changed manually as I do not have access to the SVN repository. I preferred "20a", but that makes the program fail. And I don't want to mess with the official revision range.
-GMB_DATE = u'-Date: 2018-02-06 -'  # Changed manually as I do not have access to the SVN repository.
+GMB_REVISION = u'-Revision: 12349 -'  # Updated for Python 2.7/3.12 compatibility release
+GMB_DATE = u'-Date: 2025-06-14 -'  # Updated for Python 2.7/3.12 compatibility release
 
 GMB_REVISION = GMB_REVISION[11:-2]
 GMB_DATE = GMB_DATE[7:-2].split()[0]
@@ -1375,7 +1375,7 @@ class GMailBackup(object):
                 msg_date = _getMailIMAPDate(msg)
                 msg_date2 = _getMailDate(msg)
                 msg_iid = _getMailInternalId(msg)
-                self.connection.append(self.connection.ALL_MAILS, "(\Seen)", msg_date, msg)
+                self.connection.append(self.connection.ALL_MAILS, r"(\Seen)", msg_date, msg)
 
                 dates.add(msg_date2)
             except:
@@ -1439,7 +1439,7 @@ class GMailBackup(object):
             try:
                 data = fr.read()
                 url = 'http://code.google.com/p/gmail-backup-com/downloads/list'
-                version_match = re.search('<td class="id"><a href=".*?">r(\d+)</a></td>', data)
+                version_match = re.search(r'<td class="id"><a href=".*?">r(\d+)</a></td>', data)
                 if version_match:
                     try:
                         new_revision = int(version_match.group(1))

@@ -56,7 +56,8 @@ class CmdlineExtractor(Extractor):
         return self._shortOpts
     
     def setShortOpts(self, short_opts):
-        for key, value in short_opts.iteritems():
+        from svc.utils import iteritems_compat
+        for key, value in iteritems_compat(short_opts):
             if len(key) != 1:
                 raise ValueError("Bad key in short_opts dictionary: %r" % key)
             if value in self.posOpts:
@@ -117,7 +118,8 @@ class CmdlineExtractor(Extractor):
     def _getoptShort(self):
         with_arg = self._optionsWithArg()
         ret = []
-        for short, long in self._shortOpts.iteritems():
+        from svc.utils import iteritems_compat
+        for short, long in iteritems_compat(self._shortOpts):
             if long in self.posOpts:
                 # Positional options cannot have short-option form
                 continue
@@ -151,7 +153,8 @@ class CmdlineExtractor(Extractor):
 
     def getHelpForOptions(self):
         ret = {}
-        reverse_short = dict((item, key) for (key, item) in self.shortOpts.iteritems())
+        from svc.utils import iteritems_compat
+        reverse_short = dict((item, key) for (key, item) in iteritems_compat(self.shortOpts))
         for o in self._manager.options():
             help = []
             if o in reverse_short:
@@ -221,7 +224,8 @@ class PyFileExtractor(Extractor):
         self._processedFiles.add(pyfile)
         execfile(pyfile, globals, locals)
         ret = []
-        for opt_name, value in locals.iteritems():
+        from svc.utils import iteritems_compat
+        for opt_name, value in iteritems_compat(locals):
             if isinstance(value, (list, tuple)):
                 # If option has assigned the list- or tuple-value, insert
                 # distinct items from this sequence

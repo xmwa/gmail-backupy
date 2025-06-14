@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 # -*-  coding: utf-8 -*-
+
+# Python 2/3 compatibility
+from __future__ import print_function, unicode_literals
+import sys
+if sys.version_info[0] >= 3:
+    unicode = str
+
 #   
 #   Gmail Backup GUI
 #   
@@ -24,17 +31,47 @@
 
 
 import os
-import wx, sys, optparse
+import sys
+import optparse
 import xml.dom.minidom
 import threading
 import time
 import imaplib
 
-import wx
-import wx.adv
-import wx.html
-import wx.lib.dialogs
-import wx.lib.newevent
+# Check for wxPython availability
+try:
+    import wx
+    import wx.adv
+    import wx.html
+    import wx.lib.dialogs
+    import wx.lib.newevent
+except ImportError:
+    print("ERROR: wxPython is not installed for Python", sys.version_info[:2])
+    print()
+    print("To install wxPython, please run ONE of the following commands:")
+    print()
+    
+    if sys.version_info[0] >= 3:
+        print("=== For Python 3 ===")
+        print("Option 1 (recommended): python3 -m pip install wxPython")
+        print("Option 2 (specific):    python3.12 -m pip install wxPython")
+        print("Option 3 (if needed):   python3 -m pip install --break-system-packages wxPython")
+        print()
+        print("If you get proxy errors, try:")
+        print("NO_PROXY=\"*\" HTTP_PROXY=\"\" HTTPS_PROXY=\"\" python3 -m pip install wxPython")
+    else:
+        print("=== For Python 2.7 ===")
+        print("Option 1 (recommended): python -m pip install wxPython")
+        print("Option 2 (alternative): python2.7 -m pip install wxPython")
+    
+    print()
+    print("=== Automated Installation ===")
+    print("You can also run the automated installation script:")
+    print("  ./install_dependencies.sh")
+    print()
+    print("After installation, run this script again:")
+    print("  python{} {}".format("3" if sys.version_info[0] >= 3 else "", sys.argv[0]))
+    sys.exit(1)
 
 
 import gmb as gmail_backup
@@ -46,8 +83,8 @@ import gettext
 
 import pickle
 
-GMB_GUI_REVISION = u'-Revision: 12345 -'
-GMB_GUI_DATE = u'-Date: 2017-07-12 -'
+GMB_GUI_REVISION = u'-Revision: 12347 -'
+GMB_GUI_DATE = u'-Date: 2025-06-14 -'
 
 GMB_GUI_REVISION = GMB_GUI_REVISION[11:-2]
 GMB_GUI_DATE = GMB_GUI_DATE[7:-2].split()[0]
@@ -60,7 +97,11 @@ if os.name == 'nt':
     os.environ['LANGUAGE'] = lang
 
 MESSAGES_DIR = os.path.join(os.path.dirname(sys.argv[0]), 'messages')
-gettext.install('gmail-backup', MESSAGES_DIR)#, unicode=1)
+# Python 2/3 compatible gettext installation
+if sys.version_info[0] >= 3:
+    gettext.install('gmail-backup', MESSAGES_DIR)
+else:
+    gettext.install('gmail-backup', MESSAGES_DIR, unicode=1)
 
 (UpdateLogEvent, EVT_UPDATE_LOG) = wx.lib.newevent.NewEvent()
 
@@ -107,7 +148,11 @@ class InterruptableThread(threading.Thread):
             raise SystemError("PyThreadState_SetAsyncExc failed")
      
     def raise_exc(self, excobj):
-        assert self.isAlive(), "thread must be started"
+        # Python 2/3 compatibility for thread alive check
+        if hasattr(self, 'is_alive'):
+            assert self.is_alive(), "thread must be started"
+        else:
+            assert self.isAlive(), "thread must be started"
         for tid, tobj in threading._active.items():
             if tobj is self:
                 self._async_raise(tid, excobj)
@@ -170,7 +215,7 @@ class MainPanel(wx.Panel):
 
         stBckpFldr      = wx.StaticText(self, -1, _("Backup folder:"))
         self.folder     = wx.TextCtrl(self, -1, size=(300,-1))
-        self.folder.SetToolTipString( \
+        self.folder.SetToolTip( \
 _('''You can use following forms:
   directory
   filename.zip
@@ -241,8 +286,8 @@ You can write them either as $YEAR or ${YEAR}.'''))
         szrHorizontal3.Add(self.btnExit, 0, wx.ALIGN_CENTER|wx.LEFT, 55)
 
         szrHorizontal5 = wx.BoxSizer(wx.HORIZONTAL)
-        szrHorizontal5.Add(self.message, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL, 0)     
-        szrHorizontal5.Add(self.progress, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, 0)
+        szrHorizontal5.Add(self.message, 1, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL, 0)     
+        szrHorizontal5.Add(self.progress, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         
         szrHorizontal4 = wx.BoxSizer(wx.VERTICAL)
         szrHorizontal4.Add(self.log, 0, wx.ALIGN_LEFT, 30)     
@@ -253,9 +298,9 @@ You can write them either as $YEAR or ${YEAR}.'''))
         szrVertical.Add(self.revision, 0, wx.ALIGN_CENTER|wx.BOTTOM, 0)
         
         szrVertical.Add(szrGBS, 0, wx.ALIGN_CENTER|wx.ALL, 5)
-        szrVertical.Add(line1, 0, wx.GROW|wx.ALIGN_CENTER_VERTICAL|wx.RIGHT|wx.TOP, 5)     
+        szrVertical.Add(line1, 0, wx.GROW|wx.RIGHT|wx.TOP, 5)     
         szrVertical.Add(szrHorizontal4, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 15)
-        szrVertical.Add(line2, 0, wx.GROW|wx.ALIGN_CENTER_VERTICAL|wx.RIGHT|wx.TOP, 5)     
+        szrVertical.Add(line2, 0, wx.GROW|wx.RIGHT|wx.TOP, 5)     
         szrVertical.Add(szrHorizontal3, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 15)
         
         self.btnSlctFolder.Bind(wx.EVT_BUTTON, self.OnSelectDir)
@@ -582,7 +627,7 @@ class MainDialog(wx.Frame):
         self.CreateStatusBar()
         
         szrVertical = wx.BoxSizer(wx.VERTICAL)
-        szrVertical.Add(self.panel, 0, wx.EXPAND|wx.EXPAND)
+        szrVertical.Add(self.panel, 1, wx.EXPAND)
 
         self.Refresh()
         self.SetSizer(szrVertical)
@@ -727,7 +772,12 @@ if __name__ == "__main__":
     # load the settings when module is initialised
     loadSettings()
     
-    app = wx.PySimpleApp()
+    # Use App() for both Python 2.7 and 3.x compatibility
+    try:
+        app = wx.App()
+    except:
+        # Fallback for older wxPython versions
+        app = wx.PySimpleApp()
     
     dlg = MainDialog(None, -1, TITLE_IDLE)
     dlg.Center()

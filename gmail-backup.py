@@ -1,7 +1,15 @@
 #!/usr/bin/env python
 # -*-  coding: utf-8 -*-
+
+# Python 2/3 compatibility
+from __future__ import print_function, unicode_literals
+import sys
+if sys.version_info[0] >= 3:
+    unicode = str
+    raw_input = input
+
 #
-#   Gmail Backup CLI
+#   Gmail Backup CLI - Simple Version
 #   
 #   Copyright © 2008, 2009, 2010 Jan Svec <honza.svec@gmail.com> and Filip Jurcicek <filip.jurcicek@gmail.com>
 #   
@@ -22,12 +30,17 @@
 #
 #   See LICENSE file for license details
 
-from svc.scripting import *
+import argparse
+import os
 from gmb import ConsoleNotifier, _convertTime, GMailBackup, GMB_REVISION, GMB_DATE, imap_decode, imap_encode
-import sys
 
-GMB_CMD_REVISION = u'-Revision: 12345 -'
-GMB_CMD_DATE = u'-Date: 2017-07-12 -'
+try:
+    from hashlib import md5
+except ImportError:
+    from md5 import md5
+
+GMB_CMD_REVISION = u'-Revision: 12348 -'
+GMB_CMD_DATE = u'-Date: 2025-06-14 -'
 
 GMB_CMD_REVISION = GMB_CMD_REVISION[11:-2]
 GMB_CMD_DATE = GMB_CMD_DATE[7:-2].split()[0]
@@ -35,214 +48,137 @@ GMB_CMD_DATE = GMB_CMD_DATE[7:-2].split()[0]
 MAX_REVISION = str(max(int(GMB_CMD_REVISION), int(GMB_REVISION)))
 MAX_DATE = max(GMB_CMD_DATE, GMB_DATE)
 
+USAGE_TEXT = '''
+Gmail Backup - Command Line Interface
 
-try:
-    from hashlib import md5
-except ImportError:
-    from md5 import md5
-
-class GMailBackupScript(ExScript):
-    USAGE = \
-'''Description
-===========
-
+DESCRIPTION:
 Program for backup and restore of your GMail mailbox. You will need to activate
 the IMAP access to your mailbox, to do so, please open your GMail settings and
 under POP/IMAP tab activate this option.
 
-The messages are stored in the local directory in files which names follow the
-format YYYYMMDD-hhmmss-nn.eml where YYYY is the year, MM the month number, DD
-is the day number, hh are hours, mm are minutes and ss are seconds when the
-e-mail was SENT. For the case there is more emails with the same timestamp
-there is the number nn which starts with value 1. Label assignment is stored in
-the file labels.txt which is the plain text file and it pairs the emails stored
-in the file described above with the assigned labels.
-
-Examples:
-=========
-
+EXAMPLES:
 To perform full backup of your GMail account into directory dir, use:
+  %(prog)s backup dir user@gmail.com password
 
-gmail-backup.exe backup dir user@gmail.com password
+To specify time interval, you can add additional date specification:
+  %(prog)s backup dir user@gmail.com password --since 20070621 --before 20080101
 
-To specify time interval, you can add additional date specification in the
-format YYYYMMDD. The second date can be ommited in which case the backup is
-from the first date to now:
+To restore your backup use the restore command:
+  %(prog)s restore dir user@gmail.com password
 
-gmail-backup.exe backup dir user@gmail.com password 20070621 20080101
+To use timestamp feature (stores date of last backup):
+  %(prog)s backup dir user@gmail.com password --stamp
 
-You can do multiple backups into the same directory. The labels.txt is updated
-according the new e-mails not in the previous backup.
+To clear mailbox (remove all messages):
+  %(prog)s clear user@gmail.com password
 
-To restore your backup use the restore command. To restore your GMail account
-from the previous backup in the directory dir, use for example:
-
-gmail-backup.exe restore dir user@gmail.com password
-
-You can also use the extra feature of GMail backup. It allows the user to
-completely clear his mailbox (for example if the user wants to end using the
-GMail). All messages are permanently deleted (of course the email can be stored
-somewhere deep in the Google company). To do so, execute the command:
-
-gmail-backup.exe clear user@gmail.com password
-
-The program will ask you to repeat the username, so you have the chance to
-cancel your mistake.
-
-Backups with timestamp:
-=======================
-
-Since 0.10 release GMail Backup has great feature - it stores the date of the
-last backup for future usage. The date is stored in the backup directory in the
-file "stamp". If there is no starting date (20070621 in the example above), the
-stored stamp is used. The "stamp" is updated to be the latest date from the
-stored emails during the last backup.
-
-To use this feature, simple use the --stamp command line flag:
-
-gmail-backup.exe backup dir user@gmail.com password --stamp
-
-Note:
-=====
-
-Under Linux, you have to use the "gmail-backup.sh" script distributed in
-another ZIP file instead of the Windows binary "gmail-backup.exe".
-
-
-Error reporting:
-================
-
-If you want to report some errors in this software, please use our user support 
-mailing list:
-
-gmail-backup-com-users@googlegroups.com
-
-To speed up the solution of your problem, please run the program with --debug
-command line option and include full traceback of the error. Include also the
-version of GMail Backup you have used.
-Thanks.
+To list mailbox information:
+  %(prog)s list user@gmail.com password
 '''
 
-    options = {
-        'command': ExScript.CommandParam,
-        'backup.dirname': (Required, String),
-        'backup.username': (Required, String),
-        'backup.password': (Required, String),
-        'backup.before': (String),
-        'backup.since': (String),
-        'backup.stamp': Flag,
-        'restore.dirname': OptionAlias,
-        'restore.username': OptionAlias,
-        'restore.password': OptionAlias,
-        'restore.before': OptionAlias,
-        'restore.since': OptionAlias,
-        'clear.username': OptionAlias,
-        'clear.password': OptionAlias,
-        'list.username': OptionAlias,
-        'list.password': OptionAlias,
-    }
+def backup_command(args):
+    """Performs backup of your GMail mailbox"""
+    notifier = ConsoleNotifier()
+    
+    where = ['ALL']
+    if args.since:
+        since = _convertTime(args.since)
+        where.append('SINCE')
+        where.append(since)
+    if args.before:
+        before = _convertTime(args.before)
+        where.append('BEFORE')
+        where.append(before)
+    
+    b = GMailBackup(args.username, args.password, notifier)
+    b.backup(args.dirname, where, stamp=args.stamp)
 
-    posOpts = ['command', {'backup': ['dirname', 'username', 'password', 'since', 'before'],
-                           'restore': ['dirname', 'username', 'password', 'since', 'before'],
-                           'clear': ['username', 'password'],
-                           'list': ['username', 'password'],
-                           'version': [],
-                          }]
+def restore_command(args):
+    """Performs restore of your previously backed up GMail mailbox"""
+    notifier = ConsoleNotifier()
+    b = GMailBackup(args.username, args.password, notifier)
+    b.restore(args.dirname, args.since, args.before)
 
-    optionsDoc = {
-        'command': 'Action to perform - backup or restore.',
-        'dirname': '''Directory which will contain (or contains - for restore)
-                    the backup of your mailbox.''',
-        'username': '''Your GMail account, eg. foo.bar@gmail.com''',
-        'password': '''Your GMail password''',
-        'since': '''Only e-mails since this date are backed up, date in format YYYYMMDD''',
-        'before': '''Only e-mails before this date are backed up, date in format YYYYMMDD''',
-    }
+def clear_command(args):
+    """Clear this GMail mailbox (remove all messages and labels)"""
+    mailbox = raw_input("Do you want to delete all messages from your mailbox (%s)?\nPlease, repeat the name of your mailbox: " % args.username)
+    if mailbox != args.username:
+        print("Mailbox names doesn't match")
+        return
+    notifier = ConsoleNotifier()
+    b = GMailBackup(args.username, args.password, notifier)
+    b.clear()
 
-    debugMain = False
+def list_command(args):
+    """List the names and number of messages of GMail IMAP mailboxes"""
+    notifier = ConsoleNotifier()
+    b = GMailBackup(args.username, args.password, notifier)
+    for item, n_messages in b.list():
+        print(item, imap_decode(item).encode('utf-8'), n_messages, ' '*8)
 
-    def printHelp(self):
-        print self.USAGE
+def version_command(args):
+    """Show version information"""
+    notifier = ConsoleNotifier()
+    b = GMailBackup(None, None, notifier)
+    b.reportNewVersion()
 
-    @ExScript.command
-    def backup(self, dirname, username, password, since=None, before=None, stamp=False):
-        '''Performs backup of your GMail mailbox'''
-        self.notifier = ConsoleNotifier()
-
-        where = ['ALL']
-        if since:
-            since = _convertTime(since)
-            where.append('SINCE')
-            where.append(since)
-        if before:
-            before = _convertTime(before)
-            where.append('BEFORE')
-            where.append(before)
-
-        b = GMailBackup(username, password, self.notifier)
-        b.backup(dirname, where, stamp=stamp)
-
-    @ExScript.command
-    def restore(self, dirname, username, password, since=None, before=None):
-        '''Performs restore of your previously backed up GMail mailbox'''
-        self.notifier = ConsoleNotifier()
-        b = GMailBackup(username, password, self.notifier)
-        b.restore(dirname, since, before)
-
-    @ExScript.command
-    def clear(self, username, password):
-        '''Clear this GMail mailbox (remove all messages and labels). To avoid
-        unintentionally deletion of your messages, you have to reenter your
-        mailbox name.'''
-        mailbox = raw_input("Do you want to delete all messages from your mailbox (%s)?\nPlease, repeat the name of your mailbox: " % username)
-        if mailbox != username:
-            print "Mailbox names doesn't match"
-            return
-        self.notifier = ConsoleNotifier()
-        b = GMailBackup(username, password, self.notifier)
-        b.clear()
-
-    @ExScript.command
-    def list(self, username, password):
-        '''List the names and number of messages of GMail IMAP mailboxes.
-        
-        Usefull for debugging and for gathering information about new supported
-        language. If your GMail language is not supported, don't hesitate and
-        write us to user support group:
-            
-            gmail-backup-com-users@googlegroups.com
-
-        '''
-        self.notifier = ConsoleNotifier()
-        b = GMailBackup(username, password, self.notifier)
-        for item, n_messages in b.list():
-            print item, imap_decode(item).encode('utf-8'), n_messages, ' '*8
-
-    @ExScript.command
-    def version(self):
-        self.notifier = ConsoleNotifier()
-        b = GMailBackup(None, None, self.notifier)
-        b.reportNewVersion()
-
-    def _mainError(self, value):
-        if isinstance(value, OptionError):
-            return super(GMailBackupScript, self)._mainError(value)
-        elif not hasattr(self, 'notifier'):
-            return super(GMailBackupScript, self)._mainError(value)
-        else:
-            type, error, tb = sys.exc_info()
-            self.notifier.nException(type, error, tb)
+def main():
+    parser = argparse.ArgumentParser(
+        description='Gmail Backup - backup and restore Gmail mailboxes',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=USAGE_TEXT
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    
+    # Backup command
+    backup_parser = subparsers.add_parser('backup', help='Backup Gmail mailbox')
+    backup_parser.add_argument('dirname', help='Directory to store backup')
+    backup_parser.add_argument('username', help='Gmail username (user@gmail.com)')
+    backup_parser.add_argument('password', help='Gmail password')
+    backup_parser.add_argument('--since', help='Only emails since this date (YYYYMMDD)')
+    backup_parser.add_argument('--before', help='Only emails before this date (YYYYMMDD)')
+    backup_parser.add_argument('--stamp', action='store_true', help='Use timestamp feature')
+    backup_parser.set_defaults(func=backup_command)
+    
+    # Restore command
+    restore_parser = subparsers.add_parser('restore', help='Restore Gmail mailbox from backup')
+    restore_parser.add_argument('dirname', help='Directory containing backup')
+    restore_parser.add_argument('username', help='Gmail username (user@gmail.com)')
+    restore_parser.add_argument('password', help='Gmail password')
+    restore_parser.add_argument('--since', help='Only emails since this date (YYYYMMDD)')
+    restore_parser.add_argument('--before', help='Only emails before this date (YYYYMMDD)')
+    restore_parser.set_defaults(func=restore_command)
+    
+    # Clear command
+    clear_parser = subparsers.add_parser('clear', help='Clear Gmail mailbox (delete all messages)')
+    clear_parser.add_argument('username', help='Gmail username (user@gmail.com)')
+    clear_parser.add_argument('password', help='Gmail password')
+    clear_parser.set_defaults(func=clear_command)
+    
+    # List command
+    list_parser = subparsers.add_parser('list', help='List Gmail mailbox information')
+    list_parser.add_argument('username', help='Gmail username (user@gmail.com)')
+    list_parser.add_argument('password', help='Gmail password')
+    list_parser.set_defaults(func=list_command)
+    
+    # Version command
+    version_parser = subparsers.add_parser('version', help='Show version information')
+    version_parser.set_defaults(func=version_command)
+    
+    if len(sys.argv) == 1:
+        parser.print_help()
+        return
+    
+    args = parser.parse_args()
+    
+    try:
+        args.func(args)
+    except Exception as e:
+        print("Error:", str(e))
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
-
-    def _mainErrorFull(self, type, value, tb):
-        if hasattr(self, 'notifier'):
-            self.notifier.nExceptionFull(type, value, tb)
-        else:
-            traceback.print_exception(type, value, tb)
-        sys.exit(1)
-
-
 
 if __name__ == '__main__':
-    s = GMailBackupScript()
-    s.run()
+    main()

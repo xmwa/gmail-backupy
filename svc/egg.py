@@ -139,7 +139,13 @@ class PythonEgg(object):
         super(PythonEgg, self).__init__(*args, **kwargs)
 
     def _createMetaAttributes(self):
-        for name, value in self.__class__.__dict__.iteritems():
+        # Python 2/3 compatibility
+        try:
+            items = self.__class__.__dict__.iteritems()
+        except AttributeError:
+            items = self.__class__.__dict__.items()
+        
+        for name, value in items:
             if self._isMetaAttribute(name, value):
                 setattr(self, name, value(self))
 
