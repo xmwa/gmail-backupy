@@ -562,11 +562,21 @@ You can write them either as $YEAR or ${YEAR}.'''))
     def OnStop(self, event):
         try:
             if self.currentThread is not None:
-                self.notifier.nLog(_("Interrupting ..."))
-                self.currentThread.raise_exc(KeyboardInterrupt)
+                # Check if thread is still alive before trying to stop it
+                if hasattr(self.currentThread, 'is_alive'):
+                    thread_alive = self.currentThread.is_alive()
+                else:
+                    thread_alive = self.currentThread.isAlive()
                 
-        except AssertionError:
-            pass
+                if thread_alive:
+                    self.notifier.nLog(_("Interrupting ..."))
+                    self.currentThread.raise_exc(KeyboardInterrupt)
+                else:
+                    self.notifier.nLog(_("Thread already finished"))
+                
+        except (AssertionError, ValueError) as e:
+            # Thread might have finished between check and interrupt
+            self.notifier.nLog(_("Thread already finished"))
         return True
     
     def OnNewVer(self, event):

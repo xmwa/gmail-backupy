@@ -242,7 +242,12 @@ def imap_decode(s):
             return '&'
         else:
             ss = ('+'+ss+'-').replace(',', '/')
-            return ss.decode('utf-7')
+            try:
+                return ss.decode('utf-7')
+            except UnicodeDecodeError:
+                # Handle partial or invalid UTF-7 sequences
+                # Return the original escaped sequence if decoding fails
+                return '&' + m.groups(1)[0] + '-'
     return re.sub('&(.*?)-', sub, s)
 
 def imap_encode(s):
